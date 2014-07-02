@@ -119,7 +119,7 @@ class GameScene(object):
                 if not len(neighbours) in [2, 3]:
                     cells_to_update.append(cell)
             else:
-                if len(neighbours) in [3, 6]:
+                if len(neighbours) in [3]:
                     cells_to_update.append(cell)
 
         for cell in cells_to_update:
