@@ -1,5 +1,10 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/python
+# -*- encoding: utf-8 -*-
+#
+# Copyright 2014 - Irving Prog
+# License: LGPLv3 (see http://www.gnu.org/licenses/lgpl.html)
+#
+# Website - http://github.com/irvingprog/tres-en-raya
 import pygame as pg
 
 
