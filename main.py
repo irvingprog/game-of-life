@@ -4,7 +4,7 @@
 # Copyright 2014 - Irving Prog
 # License: LGPLv3 (see http://www.gnu.org/licenses/lgpl.html)
 #
-# Website - http://github.com/irvingprog/tres-en-raya
+# Website - http://github.com/irvingprog/game-of-life
 import pygame as pg
 
 
@@ -45,28 +45,31 @@ class Cell(object):
 class GameScene(object):
 
     def __init__(self):
-        self.cells = []
-
         self.witdth_tiled = 80
         self.height_tiled = 60
         size_tile = 800 / self.witdth_tiled
 
-        for f in range(self.height_tiled):
-            for c in range(self.witdth_tiled):
-                rect = pg.Rect(c*size_tile, f*size_tile,
+        self.cells = []
+        for row in range(self.height_tiled):
+            for col in range(self.witdth_tiled):
+                rect = pg.Rect(col*size_tile, row*size_tile,
                                size_tile, size_tile)
-                self.cells.append(Cell(rect, (f, c)))
+                self.cells.append(Cell(rect, (row+1, col+1)))
 
         self.auto_generation = False
 
-        gosper_glider = [(6, 31), (7, 29), (7, 31), (8, 19), (8, 20),
-                         (8, 27), (8, 28), (8, 41), (8, 42), (9, 18),
-                         (9, 22), (9, 27), (9, 28), (9, 41), (9, 42),
-                         (10, 7), (10, 8), (10, 17), (10, 23), (10, 27),
-                         (10, 28), (11, 7), (11, 8), (11, 17), (11, 21),
-                         (11, 23), (11, 24), (11, 29), (11, 31), (12, 17),
-                         (12, 23), (12, 31), (13, 18), (13, 22), (14, 19),
-                         (14, 20)]
+        gosper_glider = [(7, 32), (8, 30), (8, 32),
+                         (9, 20), (9, 21), (9, 28),
+                         (9, 29), (9, 42), (9, 43),
+                         (10, 19), (10, 23), (10, 28),
+                         (10, 29), (10, 42), (10, 43),
+                         (11, 8), (11, 9), (11, 18),
+                         (11, 24), (11, 28), (11, 29),
+                         (12, 8), (12, 9), (12, 18),
+                         (12, 22), (12, 24), (12, 25),
+                         (12, 30), (12, 32), (13, 18),
+                         (13, 24), (13, 32), (14, 19),
+                         (14, 23), (15, 20), (15, 21)]
 
         for cell in self.cells:
             if cell.pos in gosper_glider:
@@ -133,33 +136,42 @@ class GameScene(object):
 
     def check_neighbours(self, pos_cell, cell):
         neighbours = 0
+        row, column = cell.pos
 
-        if pos_cell > self.witdth_tiled:
-            before_file = pos_cell - self.witdth_tiled
-            if self.cells[before_file-1].status:
-                neighbours += 1
-            if self.cells[before_file].status:
-                neighbours += 1
-            if self.cells[before_file+1].status:
+        if row > 1:
+            before_row = pos_cell - self.witdth_tiled
+            if self.cells[before_row].status:       # neighbour up-center
                 neighbours += 1
 
-        if pos_cell < len(self.cells) - self.witdth_tiled - 1:
+        if row > 1 and column > 1:                  # neighbour up-left
+            if self.cells[before_row-1].status:
+                neighbours += 1
+
+        if row > 1 and column < self.witdth_tiled:  # neighbour up-right
+            if self.cells[before_row+1].status:
+                    neighbours += 1
+
+        if row < self.height_tiled:                 # neighbour bottom-center
             after_file = pos_cell + self.witdth_tiled
-            if self.cells[after_file-1].status:
-                neighbours += 1
             if self.cells[after_file].status:
                 neighbours += 1
-            if self.cells[after_file+1].status:
+
+        if row < self.height_tiled and column > 1:  # neighbour bottom-left
+            if self.cells[after_file-1].status:
                 neighbours += 1
 
-        if pos_cell > 0:
+        if row < self.height_tiled and column < self.witdth_tiled:
+            if self.cells[after_file+1].status:     # neighbour bottom-right
+                neighbours += 1
+
+        if column > 1:                              # neighbour left
             before_cell = self.cells[pos_cell-1]
-            if before_cell.status and cell.pos[1] > 0:
+            if before_cell.status:
                 neighbours += 1
 
-        if pos_cell < len(self.cells) - 1:
+        if column < self.witdth_tiled:              # neighbour right
             after_cell = self.cells[pos_cell+1]
-            if after_cell.status and cell.pos[1] < self.witdth_tiled - 1:
+            if after_cell.status:
                 neighbours += 1
 
         return neighbours
