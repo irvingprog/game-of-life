@@ -70,13 +70,11 @@ class Cell(object):
 
         if column > 1:
             # neighbour left
-            before_cell = self.index - 1
-            self.neighbours.append(self.cells[before_cell])
+            self.neighbours.append(self.cells[self.index - 1])
 
         if column < self.witdth_tiled:
             # neighbour right
-            after_cell = self.index + 1
-            self.neighbours.append(self.cells[after_cell])
+            self.neighbours.append(self.cells[self.index + 1])
 
     def check_neighbours(self):
         neighbours = [n for n in self.neighbours if n.status]
@@ -116,7 +114,7 @@ class GameScene(object):
         for cell in self.cells:
             cell.meet_neighbours()
 
-        self.auto_generation = False
+        self.auto_regeneration = False
         self.mouse_draw = False
 
         gosper_glider = [(7, 32), (8, 30), (8, 32),
@@ -136,6 +134,8 @@ class GameScene(object):
             if cell.pos in gosper_glider:
                 cell.change_status()
 
+        self.cells_to_draw = self.cells
+
     def update(self):
         for event in pg.event.get():
             if event.type == pg.KEYDOWN:
@@ -152,14 +152,14 @@ class GameScene(object):
                 if self.mouse_draw:
                     self.check_mouse_motion_over_cells(event.pos)
 
-        if self.auto_generation:
+        if self.auto_regeneration:
             self.regeneration()
 
     def check_key_pressed(self, key):
         if key == pg.K_ESCAPE:
             exit()
         elif key == pg.K_p:
-            self.auto_generation = not self.auto_generation
+            self.auto_regeneration = not self.auto_regeneration
         elif key == pg.K_s:
             self.regeneration()
         elif key == pg.K_i:
@@ -172,7 +172,7 @@ class GameScene(object):
             cell.border = not cell.border
 
     def draw(self, screen):
-        for cell in self.cells:
+        for cell in self.cells_to_draw:
             cell.draw(screen)
 
         pg.display.flip()
@@ -181,11 +181,15 @@ class GameScene(object):
         for cell in self.cells:
             if cell.rect.collidepoint(pos[0], pos[1]):
                 cell.status = True
+                if not cell in self.cells_to_draw:
+                    self.cells_to_draw.append(cell)
 
     def check_click_over_cells(self, pos):
         for cell in self.cells:
             if cell.rect.collidepoint(pos[0], pos[1]):
                 cell.change_status()
+                if not cell in self.cells_to_draw:
+                    self.cells_to_draw.append(cell)
 
     def get_pos_live_cells(self):
         return [cell.pos for cell in self.cells if cell.status]
@@ -201,13 +205,14 @@ class GameScene(object):
                 if neighbours in [3]:
                     cells_to_update.append(cell)
 
+        self.cells_to_draw = cells_to_update[:]
         for cell in cells_to_update:
             cell.change_status()
 
 
 def main():
     screen = pg.display.set_mode((800, 600))
-    pg.display.set_caption('Game of life')
+    pg.display.set_caption('Game of life - %d fps' % 0)
     pg.init()
     clock = pg.time.Clock()
 
@@ -217,6 +222,7 @@ def main():
         scene.update()
         scene.draw(screen)
         clock.tick(40)
+        pg.display.set_caption('Game of life - %d fps' % (clock.get_fps()))
 
 if __name__ == '__main__':
     main()
