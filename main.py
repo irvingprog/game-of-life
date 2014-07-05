@@ -9,14 +9,18 @@ import pygame as pg
 
 
 class Cell(object):
-    def __init__(self, rect, pos):
+    def __init__(self, rect, index, pos, tiled, cells):
         super(Cell, self).__init__()
         self.status = None
         self.color = (255, 255, 255)
         self.border_color = (0, 0, 0)
         self.rect = rect
+        self.index = index
         self.pos = pos
+        self.witdth_tiled, self.height_tiled = tiled
+        self.cells = cells
         self.border = 1
+        self.neighbours = []
 
     def set_status(self, status):
         self._status = status
@@ -31,6 +35,53 @@ class Cell(object):
 
     status = property(get_status, set_status,
                       doc='Setter and getter status of cell')
+
+    def change_status(self):
+        self.status = not self.status
+
+    def meet_neighbours(self):
+        row, column = self.pos
+
+        if row > 1:
+            before_row = self.index - self.witdth_tiled
+            # neighbour up-center
+            self.neighbours.append(self.cells[before_row])
+
+        if row > 1 and column > 1:
+            # neighbour up-left
+            self.neighbours.append(self.cells[before_row - 1])
+
+        if row > 1 and column < self.witdth_tiled:
+            # neighbour up-right
+            self.neighbours.append(self.cells[before_row + 1])
+
+        if row < self.height_tiled:
+            # neighbour bottom-center
+            after_file = self.index + self.witdth_tiled
+            self.neighbours.append(self.cells[after_file])
+
+        if row < self.height_tiled and column > 1:
+            # neighbour bottom-left
+            self.neighbours.append(self.cells[after_file - 1])
+
+        if row < self.height_tiled and column < self.witdth_tiled:
+            # neighbour bottom-right
+            self.neighbours.append(self.cells[after_file + 1])
+
+        if column > 1:
+            # neighbour left
+            before_cell = self.index - 1
+            self.neighbours.append(self.cells[before_cell])
+
+        if column < self.witdth_tiled:
+            # neighbour right
+            after_cell = self.index + 1
+            self.neighbours.append(self.cells[after_cell])
+
+    def check_neighbours(self):
+        neighbours = [n for n in self.neighbours if n.status]
+
+        return len(neighbours)
 
     def __str__(self):
         return "cell, status:{0}, fila:{1[0]} columna; {1[1]}".format(
@@ -50,13 +101,23 @@ class GameScene(object):
         size_tile = 800 / self.witdth_tiled
 
         self.cells = []
-        for row in range(self.height_tiled):
-            for col in range(self.witdth_tiled):
-                rect = pg.Rect(col*size_tile, row*size_tile,
+        for row in xrange(self.height_tiled):
+            for col in xrange(self.witdth_tiled):
+                rect = pg.Rect(col * size_tile, row * size_tile,
                                size_tile, size_tile)
-                self.cells.append(Cell(rect, (row+1, col+1)))
+
+                self.cells.append(Cell(rect=rect,
+                                       index=len(self.cells),
+                                       pos=(row + 1, col + 1),
+                                       tiled=(self.witdth_tiled,
+                                              self.height_tiled),
+                                       cells=self.cells))
+
+        for cell in self.cells:
+            cell.meet_neighbours()
 
         self.auto_generation = False
+        self.mouse_draw = False
 
         gosper_glider = [(7, 32), (8, 30), (8, 32),
                          (9, 20), (9, 21), (9, 28),
@@ -73,16 +134,23 @@ class GameScene(object):
 
         for cell in self.cells:
             if cell.pos in gosper_glider:
-                cell.status = True
+                cell.change_status()
 
     def update(self):
         for event in pg.event.get():
-
             if event.type == pg.KEYDOWN:
                 self.check_key_pressed(event.key)
 
-            if event.type == pg.MOUSEBUTTONDOWN:
+            if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+                self.mouse_draw = True
                 self.check_click_over_cells(event.pos)
+
+            elif event.type == pg.MOUSEBUTTONUP and event.button == 1:
+                self.mouse_draw = False
+
+            elif event.type == pg.MOUSEMOTION:
+                if self.mouse_draw:
+                    self.check_mouse_motion_over_cells(event.pos)
 
         if self.auto_generation:
             self.regeneration()
@@ -109,21 +177,23 @@ class GameScene(object):
 
         pg.display.flip()
 
+    def check_mouse_motion_over_cells(self, pos):
+        for cell in self.cells:
+            if cell.rect.collidepoint(pos[0], pos[1]):
+                cell.status = True
+
     def check_click_over_cells(self, pos):
         for cell in self.cells:
             if cell.rect.collidepoint(pos[0], pos[1]):
-                self.change_status(cell)
+                cell.change_status()
 
     def get_pos_live_cells(self):
         return [cell.pos for cell in self.cells if cell.status]
 
-    def change_status(self, cell):
-        cell.status = not cell.status
-
     def regeneration(self):
         cells_to_update = []
-        for index, cell in enumerate(self.cells):
-            neighbours = self.check_neighbours(index, cell)
+        for cell in self.cells:
+            neighbours = cell.check_neighbours()
             if cell.status:
                 if not neighbours in [2, 3]:
                     cells_to_update.append(cell)
@@ -132,49 +202,7 @@ class GameScene(object):
                     cells_to_update.append(cell)
 
         for cell in cells_to_update:
-            self.change_status(cell)
-
-    def check_neighbours(self, pos_cell, cell):
-        neighbours = 0
-        row, column = cell.pos
-
-        if row > 1:
-            before_row = pos_cell - self.witdth_tiled
-            if self.cells[before_row].status:       # neighbour up-center
-                neighbours += 1
-
-        if row > 1 and column > 1:                  # neighbour up-left
-            if self.cells[before_row-1].status:
-                neighbours += 1
-
-        if row > 1 and column < self.witdth_tiled:  # neighbour up-right
-            if self.cells[before_row+1].status:
-                    neighbours += 1
-
-        if row < self.height_tiled:                 # neighbour bottom-center
-            after_file = pos_cell + self.witdth_tiled
-            if self.cells[after_file].status:
-                neighbours += 1
-
-        if row < self.height_tiled and column > 1:  # neighbour bottom-left
-            if self.cells[after_file-1].status:
-                neighbours += 1
-
-        if row < self.height_tiled and column < self.witdth_tiled:
-            if self.cells[after_file+1].status:     # neighbour bottom-right
-                neighbours += 1
-
-        if column > 1:                              # neighbour left
-            before_cell = self.cells[pos_cell-1]
-            if before_cell.status:
-                neighbours += 1
-
-        if column < self.witdth_tiled:              # neighbour right
-            after_cell = self.cells[pos_cell+1]
-            if after_cell.status:
-                neighbours += 1
-
-        return neighbours
+            cell.change_status()
 
 
 def main():
