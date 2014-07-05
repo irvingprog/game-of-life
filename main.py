@@ -137,6 +137,9 @@ class GameScene(object):
         self.cells_to_draw = self.cells
 
     def update(self):
+        if self.auto_regeneration:
+            self.regeneration()
+
         for event in pg.event.get():
             if event.type == pg.KEYDOWN:
                 self.check_key_pressed(event.key)
@@ -151,9 +154,6 @@ class GameScene(object):
             elif event.type == pg.MOUSEMOTION:
                 if self.mouse_draw:
                     self.check_mouse_motion_over_cells(event.pos)
-
-        if self.auto_regeneration:
-            self.regeneration()
 
     def check_key_pressed(self, key):
         if key == pg.K_ESCAPE:
@@ -170,6 +170,7 @@ class GameScene(object):
     def borders(self):
         for cell in self.cells:
             cell.border = not cell.border
+            self.cells_to_draw = self.cells
 
     def draw(self, screen):
         for cell in self.cells_to_draw:
@@ -181,15 +182,17 @@ class GameScene(object):
         for cell in self.cells:
             if cell.rect.collidepoint(pos[0], pos[1]):
                 cell.status = True
-                if not cell in self.cells_to_draw:
-                    self.cells_to_draw.append(cell)
+                self.add_to_cells_to_draw(cell)
 
     def check_click_over_cells(self, pos):
         for cell in self.cells:
             if cell.rect.collidepoint(pos[0], pos[1]):
                 cell.change_status()
-                if not cell in self.cells_to_draw:
-                    self.cells_to_draw.append(cell)
+                self.add_to_cells_to_draw(cell)
+
+    def add_to_cells_to_draw(self, cell):
+        if not cell in self.cells_to_draw:
+            self.cells_to_draw.append(cell)
 
     def get_pos_live_cells(self):
         return [cell.pos for cell in self.cells if cell.status]
@@ -205,7 +208,8 @@ class GameScene(object):
                 if neighbours in [3]:
                     cells_to_update.append(cell)
 
-        self.cells_to_draw = cells_to_update[:]
+        self.cells_to_draw = cells_to_update
+
         for cell in cells_to_update:
             cell.change_status()
 
